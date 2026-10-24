@@ -1,5 +1,7 @@
 import cv2 as cv
+from save import ClipCache
 from stamp.stamp import Stamp
+
 
 def open_camera():
     # Windows: the default backend often fails on laptop cameras, so try
@@ -13,29 +15,36 @@ def open_camera():
             cap.release()
     return None
 
-cap = open_camera()
-if cap is None:
-    print("Cannot open camera")
-    exit()
 
-stamp = Stamp("unicon.png")
-while True:
-    # Capture frame-by-frame
-    ret, frame = cap.read()
+def main():
+    cap = open_camera()
+    if cap is None:
+        print("Cannot open camera")
+        return
 
-    # if frame is read correctly ret is True
-    if not ret:
-        print("Can't receive frame (stream end?). Exiting ...")
-        break
+    stamp = Stamp("unicon.png")
+    clips = ClipCache(seconds=10)
+    print("Press 's' to save the last 10 seconds, 'q' to quit.")
 
-    # Stamp the logo onto the frame
-    stamp.apply(frame)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
 
-    # Display the resulting frame
-    cv.imshow('Uniocon Video', frame)
-    if cv.waitKey(1) == ord('q'):
-        break
+        stamp.apply(frame)   # logo on screen and in saved clips
+        clips.add(frame)     # keep the last 10 seconds
 
-# When everything done, release the capture
-cap.release()
-cv.destroyAllWindows()
+        cv.imshow('Unicorn frame', frame)
+        key = cv.waitKey(1) & 0xFF
+        if key in (ord('s'), ord('S')):
+            clips.save()
+        elif key == ord('q'):
+            break
+
+    cap.release()
+    cv.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()

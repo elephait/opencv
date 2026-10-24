@@ -12,7 +12,8 @@ import cv2 as cv
 import numpy as np
 
 STAMP_WIDTH_RATIO = 0.12   # stamp width as a fraction of the frame width
-STAMP_MARGIN_RATIO = 0.02  # gap from the frame edges, as a fraction of frame width
+STAMP_MARGIN_RATIO = 0.02    # left gap, as a fraction of frame width
+STAMP_MARGIN_Y_RATIO = 0.06  # top gap, as a fraction of frame width
 
 # The black logo disappears on dark footage, so switch to a soft light gray
 # when the area under it is dark. Two thresholds (hysteresis) stop flickering.
@@ -60,7 +61,7 @@ class Stamp:
         self._frame_width = frame_width
 
     def apply(self, frame):
-        """Blend the stamp onto the bottom-right corner of the frame (in place)."""
+        """Blend the stamp onto the top-left corner of the frame (in place)."""
         if self._image is None:
             return frame
         fh, fw = frame.shape[:2]
@@ -69,7 +70,8 @@ class Stamp:
         bgr, alpha = self._scaled
         h, w = bgr.shape[:2]
         margin = int(fw * STAMP_MARGIN_RATIO)
-        y, x = fh - h - margin, fw - w - margin
+        y = int(fw * STAMP_MARGIN_Y_RATIO)
+        x = margin  # top-left corner
         if y < 0 or x < 0:
             return frame
 
