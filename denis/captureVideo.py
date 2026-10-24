@@ -1,6 +1,5 @@
-import numpy as np
-import time
 import cv2 as cv
+from stamp.stamp import Stamp
 
 def open_camera():
     # Windows: the default backend often fails on laptop cameras, so try
@@ -14,14 +13,12 @@ def open_camera():
             cap.release()
     return None
 
-SWITCH_SECONDS = 10  # toggle between color and gray every N seconds
-
 cap = open_camera()
 if cap is None:
     print("Cannot open camera")
     exit()
-show_gray = False
-last_switch = time.monotonic()
+
+stamp = Stamp("unicon.png")
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -30,18 +27,12 @@ while True:
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
         break
-    # Switch between color and gray every SWITCH_SECONDS
-    now = time.monotonic()
-    if now - last_switch >= SWITCH_SECONDS:
-        show_gray = not show_gray
-        last_switch = now
-    # Display the resulting frame
-    if show_gray:
-        cv.rectangle(frame,(384,0),(510,128),(0,255,0),3)
-        cv.imshow('denis frame', cv.cvtColor(frame, cv.COLOR_BGR2GRAY))
 
-    else:
-        cv.imshow('original frame', frame)
+    # Stamp the logo onto the frame
+    stamp.apply(frame)
+
+    # Display the resulting frame
+    cv.imshow('Uniocon Video', frame)
     if cv.waitKey(1) == ord('q'):
         break
 
