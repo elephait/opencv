@@ -44,6 +44,7 @@ def main():
 
     cap.release()
     cv.destroyAllWindows()
+    clips.wait()         # let any clip still being written finish
 
 
 if __name__ == "__main__":
