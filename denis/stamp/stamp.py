@@ -2,7 +2,9 @@
 
 Usage:
     from stamp import Stamp
-    stamp = Stamp("unicon.png")      # path may be relative to this file
+    stamp = Stamp("unicon.png")              # path may be relative to this file
+    stamp = Stamp("unicon.png", color="pink")  # any name in COLORS; default "mono"
+    stamp.set_color("blue")                    # change it later
     ...
     stamp.apply(frame)               # call on every frame (modifies it in place)
 """
@@ -15,15 +17,26 @@ STAMP_WIDTH_RATIO = 0.12   # stamp width as a fraction of the frame width
 STAMP_MARGIN_RATIO = 0.02    # left gap, as a fraction of frame width
 STAMP_MARGIN_Y_RATIO = 0.06  # top gap, as a fraction of frame width
 
-# The black logo disappears on dark footage, so switch to a soft light gray
-# when the area under it is dark. Two thresholds (hysteresis) stop flickering.
-LIGHT_COLOR = (215, 215, 215)  # BGR, soft light gray
+# The logo is drawn in one color: the dark shade on bright footage, the light
+# shade when the area under it is dark. Two thresholds (hysteresis) stop flickering.
+# name: (dark, light), both BGR
+COLORS = {
+    "mono":   ((0, 0, 0),      (255, 255, 255)),  # black / white
+    "pink":   ((70, 30, 170),  (200, 170, 255)),
+    "red":    ((20, 20, 160),  (150, 150, 255)),
+    "blue":   ((140, 40, 10),  (255, 200, 150)),
+    "green":  ((30, 110, 20),  (170, 240, 160)),
+    "purple": ((120, 30, 90),  (240, 180, 220)),
+    "orange": ((0, 90, 200),   (140, 200, 255)),
+}
+DEFAULT_COLOR = "mono"
 DARK_BELOW = 90                # go light when background brightness < this
-LIGHT_ABOVE = 130              # go back to black when brightness > this
+LIGHT_ABOVE = 130              # go back to dark when brightness > this
 
 
 class Stamp:
-    def __init__(self, path):
+    def __init__(self, path, color=DEFAULT_COLOR):
+        self.set_color(color)
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
         self.path = path
@@ -32,6 +45,15 @@ class Stamp:
         self._frame_width = None
         self._use_light = False
         self._smoothed = None
+
+    def set_color(self, color):
+        """Switch to a named color pair from COLORS (can be called any time)."""
+        if color not in COLORS:
+            raise ValueError(f"Unknown stamp color {color!r}; choose from {', '.join(COLORS)}")
+        dark, light = COLORS[color]
+        self.color = color
+        self._dark = np.array(dark, np.float32)
+        self._light = np.array(light, np.float32)
 
     @staticmethod
     def _load(path):
@@ -85,6 +107,6 @@ class Stamp:
         elif not self._use_light and self._smoothed < DARK_BELOW:
             self._use_light = True
 
-        fg = np.array(LIGHT_COLOR, np.float32) if self._use_light else bgr
+        fg = self._light if self._use_light else self._dark
         frame[y:y + h, x:x + w] = (alpha * fg + (1.0 - alpha) * roi).astype(np.uint8)
         return frame
